@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Security Dashboard — SQL Threat Detector</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="nav-brand"><span class="shield">🛡</span> SQL Threat Detector</a>
+  <div class="nav-links">
+    <a href="/">Analyzer</a>
+    <a href="/dashboard" class="active">Dashboard</a>
+    <a href="/logs">Logs</a>
+    <a href="/portal">Employee Portal</a>
+    <a href="/attacker">Attack Sim</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="flex items-center justify-between" style="margin-bottom:20px;">
+    <h2 style="font-size:18px; font-weight:700;">Security Dashboard</h2>
+    <button class="btn btn-ghost" onclick="loadAll()" id="refreshBtn">↻ Refresh</button>
+  </div>
+
+  <!-- ── Stat Cards ── -->
+  <div class="stats-grid">
+    <div class="stat-card stat-blue">
+      <div class="stat-value" id="totalQueries">—</div>
+      <div class="stat-label">Total Queries</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-value" id="benignCount">—</div>
+      <div class="stat-label">Benign</div>
+    </div>
+    <div class="stat-card stat-red">
+      <div class="stat-value" id="sqliCount">—</div>
+      <div class="stat-label">SQL Injections</div>
+    </div>
+    <div class="stat-card stat-orange">
+      <div class="stat-value" id="insiderCount">—</div>
+      <div class="stat-label">Insider Threats</div>
+    </div>
+    <div class="stat-card stat-purple">
+      <div class="stat-value" id="avgRisk">—</div>
+      <div class="stat-label">Avg Risk Score</div>
+    </div>
+  </div>
+
+  <!-- ── Charts Row ── -->
+  <div class="charts-grid">
+    <div class="card">
+      <div class="card-title">📈 Attack Timeline (Last 24h)</div>
+      <canvas id="timelineChart" height="120"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">🍩 Threat Distribution</div>
+      <canvas id="donutChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Bottom Row ── -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+
+    <!-- Role Stats -->
+    <div class="card">
+      <div class="card-title">👥 Per-Role Statistics</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Total</th>
+              <th>Attacks</th>
+              <th>Avg Risk</th>
+              <th>Attack Rate</th>
+            </tr>
+          </thead>
+          <tbody id="roleStatsBody">
+            <tr><td colspan="5" class="text-muted" style="text-align:center;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Flags -->
+    <div class="card">
+      <div class="card-title">🚨 Recent Flagged Queries</div>
+      <div class="alert-feed" id="alertFeed">
+        <div class="text-muted" style="text-align:center; padding:20px;">Loading...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Heatmap ── -->
+  <div class="card">
+    <div class="card-title">🔥 Risk Heatmap — Role × Attack Type</div>
+    <div id="heatmapContainer">
+      <div class="text-muted" style="text-align:center; padding:30px;">Loading...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SQL Threat Detector</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <a href="/" class="nav-brand">
+    <span class="shield">🛡</span> SQL Threat Detector
+  </a>
+  <div class="nav-links">
+    <a href="/" class="active">Analyzer</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/logs">Logs</a>
+    <a href="/portal">Employee Portal</a>
+    <a href="/attacker">Attack Sim</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+
+    <!-- ── LEFT: Query Input Panel ── -->
+    <div>
+      <div class="card">
+        <div class="card-title">⚡ Query Analyzer</div>
+
+        <!-- Role Selector -->
+        <div class="form-group">
+          <div class="form-label">Select User Role</div>
+          <div class="role-selector">
+            <div class="role-btn active" data-role="employee" onclick="selectRole('employee')">
+              <span class="role-icon">👤</span>
+              Employee
+            </div>
+            <div class="role-btn" data-role="admin" onclick="selectRole('admin')">
+              <span class="role-icon">🔑</span>
+              Admin
+            </div>
+            <div class="role-btn" data-role="outsider" onclick="selectRole('outsider')">
+              <span class="role-icon">👾</span>
+              Outsider
+            </div>
+          </div>
+        </div>
+
+        <!-- Query Input -->
+        <div class="form-group">
+          <label class="form-label" for="queryInput">SQL Query</label>
+          <textarea
+            class="form-control"
+            id="queryInput"
+            rows="5"
+            placeholder="e.g. SELECT * FROM employees WHERE department='Engineering'"
+          ></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeQuery()">
+            🔍 Analyze Query
+          </button>
+          <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+
+      <!-- ── Result Panel ── -->
+      <div id="resultPanel" class="result-panel mt-16">
+        <div class="result-header">
+          <div>
+            <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">DETECTION RESULT</div>
+            <span id="resultBadge" class="badge"></span>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--text-muted);">RISK SCORE</div>
+            <div id="riskScoreDisplay" style="font-size:28px; font-weight:700;"></div>
+          </div>
+        </div>
+
+        <div class="risk-bar-wrap">
+          <div id="riskBar" class="risk-bar"></div>
+        </div>
+
+        <div class="result-meta mt-16">
+          <div class="result-row">
+            <span class="key">Attack Type</span>
+            <span id="attackType" style="font-family:monospace; color:var(--text);"></span>
+          </div>
+          <div class="result-row">
+            <span class="key">Detection Source</span>
+            <span id="detectionSource"></span>
+          </div>
+          <div class="result-row">
+            <span class="key">Role Multiplier</span>
+            <span id="roleMultiplier" style="color:var(--text-muted);"></span>
+          </div>
+          <div class="result-row" style="align-items:flex-start;">
+            <span class="key">Explanation</span>
+            <span id="explanation" style="color:var(--text); line-height:1.5;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loadingPanel" style="display:none; text-align:center; padding:32px;" class="card mt-16">
+        <div class="spinner" style="margin:0 auto 12px;"></div>
+        <div style="color:var(--text-muted); font-size:13px;" id="loadingText">Analyzing query...</div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Sample Queries ── -->
+    <div>
+      <div class="card">
+        <div class="card-title">📋 Sample Queries</div>
+        <p style="color:var(--text-muted); font-size:12px; margin-bottom:14px;">
+          Click any sample to load it into the analyzer.
+        </p>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; margin-bottom:8px;">✅ Benign</div>
+          <div class="sample-grid">
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-benign">benign</span><br/>
+              SELECT id, name FROM employees WHERE department = 'Engineering'
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-benign">benign</span><br/>
+              SELECT order_id, total_amount FROM orders WHERE customer_id = 42
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-benign">benign</span><br/>
+              SELECT product_name, quantity FROM orders WHERE status = 'pending'
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--red); font-weight:600; text-transform:uppercase; margin-bottom:8px;">🔴 SQL Injection</div>
+          <div class="sample-grid">
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-sqli">sqli</span><br/>
+              SELECT * FROM users WHERE username='admin'--
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-sqli">sqli</span><br/>
+              SELECT * FROM users WHERE id=1 OR '1'='1'
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-sqli">sqli</span><br/>
+              SELECT * FROM users WHERE id=1 UNION SELECT username,password,3,4 FROM users
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-sqli">sqli</span><br/>
+              SELECT * FROM users; DROP TABLE users;--
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-sqli">sqli</span><br/>
+              SELECT * FROM users WHERE id=1 AND SLEEP(5)
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px; color:var(--orange); font-weight:600; text-transform:uppercase; margin-bottom:8px;">🟠 Insider Threat</div>
+          <div class="sample-grid">
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-insider">insider</span><br/>
+              SELECT name, salary, ssn FROM employees LIMIT 100 OFFSET 0
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-insider">insider</span><br/>
+              UPDATE users SET role='admin' WHERE id=7
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-insider">insider</span><br/>
+              SELECT * FROM users
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-insider">insider</span><br/>
+              SELECT username, password FROM users
+            </div>
+            <div class="sample-btn" onclick="loadSample(this)">
+              <span class="sample-tag tag-insider">insider</span><br/>
+              DELETE FROM transactions
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Stats Mini Card -->
+      <div class="card mt-16">
+        <div class="card-title">📊 Session Stats</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; text-align:center;">
+          <div>
+            <div style="font-size:22px; font-weight:700; color:var(--blue);" id="sessionTotal">0</div>
+            <div style="font-size:11px; color:var(--text-muted);">Total</div>
+          </div>
+          <div>
+            <div style="font-size:22px; font-weight:700; color:var(--red);" id="sessionAttacks">0</div>
+            <div style="font-size:11px; color:var(--text-muted);">Attacks</div>
+          </div>
+          <div>
+            <div style="font-size:22px; font-weight:700; color:var(--orange);" id="sessionAvgRisk">0.00</div>
+            <div style="font-size:11px; color:var(--text-muted);">Avg Risk</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/js/query.js"></script>
+</body>
+</html>

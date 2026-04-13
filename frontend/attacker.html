@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Attack Simulator — SQL Threat Detector</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    body { background: #0d0608; }
+
+    .atk-header {
+      background: linear-gradient(135deg, #1a0508, #2d0a10);
+      border-bottom: 2px solid #7f1d1d;
+      padding: 0 32px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .atk-brand { display:flex; align-items:center; gap:10px; font-size:17px; font-weight:700; color:#fca5a5; }
+
+    .atk-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+
+    .atk-sidebar {
+      background: #0d0608;
+      border-right: 1px solid #3b0f14;
+      padding: 16px 0;
+      overflow-y: auto;
+    }
+
+    .atk-section {
+      padding: 10px 16px 4px;
+      font-size: 10px; font-weight: 700;
+      color: #6b2530;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    .attack-btn {
+      width: 100%;
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 16px;
+      background: none;
+      border: none; border-left: 3px solid transparent;
+      color: #cd7f7f;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .attack-btn:hover {
+      background: rgba(239,68,68,0.06);
+      border-left-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .attack-btn.active {
+      background: rgba(239,68,68,0.1);
+      border-left-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .attack-btn .atk-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .attack-btn .atk-name { font-size: 13px; font-weight: 600; }
+    .attack-btn .atk-desc { font-size: 11px; color: #6b2530; margin-top: 2px; line-height: 1.4; }
+
+    .severity-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 6px; margin-left: auto;
+    }
+    .sev-critical { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+    .sev-high     { background: #f97316; }
+    .sev-medium   { background: #eab308; }
+
+    /* Main panel */
+    .atk-main { padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; }
+
+    .atk-title { font-size: 11px; font-weight: 700; color: #6b2530; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+
+    .attack-card {
+      background: #130508;
+      border: 1px solid #3b0f14;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .attack-card h2 { font-size: 18px; color: #fca5a5; margin-bottom: 4px; }
+    .attack-card .desc { font-size: 13px; color: #9d4a56; margin-bottom: 16px; line-height: 1.6; }
+
+    .mitre-tag {
+      display: inline-block;
+      padding: 2px 10px; border-radius: 12px;
+      background: rgba(239,68,68,0.1);
+      color: #f87171; font-size: 11px;
+      font-weight: 600; margin-right: 6px; margin-bottom: 12px;
+    }
+
+    /* Query display */
+    .query-display {
+      background: #060203;
+      border: 1px solid #3b0f14;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 13px;
+      color: #fca5a5;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .fire-btn {
+      background: linear-gradient(135deg, #991b1b, #7f1d1d);
+      color: #fca5a5;
+      border: 1px solid #ef4444;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.15s;
+    }
+    .fire-btn:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); }
+    .fire-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .role-select-small {
+      background: #060203;
+      border: 1px solid #3b0f14;
+      border-radius: 6px;
+      color: #cd7f7f;
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Result */
+    .atk-result {
+      background: #060203;
+      border: 1px solid #3b0f14;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .atk-result h3 { font-size: 14px; color: #9d4a56; margin-bottom: 14px; }
+
+    .detection-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #1a0508;
+    }
+    .detection-row:last-child { border-bottom: none; }
+
+    .det-label { font-size: 11px; color: #6b2530; min-width: 130px; }
+    .det-value { font-size: 13px; color: #e2e8f0; }
+
+    .caught-banner {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .passed-banner {
+      background: rgba(234,179,8,0.1);
+      border: 1px solid rgba(234,179,8,0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    /* Score ring */
+    .score-ring {
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+      border: 3px solid;
+      flex-shrink: 0;
+    }
+
+    /* Live feed */
+    .live-feed {
+      background: #060203;
+      border: 1px solid #3b0f14;
+      border-radius: 10px;
+      padding: 16px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .feed-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid #1a0508;
+      font-size: 11px;
+    }
+    .feed-item:last-child { border-bottom: none; }
+
+    .feed-time { color: #6b2530; min-width: 48px; }
+    .feed-label { font-weight: 700; min-width: 54px; }
+    .feed-query { color: #9d4a56; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+    .feed-score { margin-left: auto; font-weight: 700; min-width: 36px; text-align: right; }
+
+    .empty-feed { color: #6b2530; font-size: 12px; text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="atk-header">
+  <div class="atk-brand">
+    💀 Attack Simulator
+    <span style="font-size:11px; color:#6b2530; font-weight:400;">— SQL Threat Detection Demo</span>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="/portal" style="font-size:11px; color:#6b2530; text-decoration:none; border:1px solid #3b0f14; padding:4px 12px; border-radius:20px;">
+      👤 Employee Portal ↗
+    </a>
+    <a href="/dashboard" target="_blank" style="font-size:11px; color:#6b2530; text-decoration:none; border:1px solid #3b0f14; padding:4px 12px; border-radius:20px;">
+      🛡 Security Dashboard ↗
+    </a>
+  </div>
+</header>
+
+<div class="atk-layout">
+
+  <!-- ── Attack Sidebar ── -->
+  <aside class="atk-sidebar">
+
+    <div class="atk-section">SQL Injection</div>
+
+    <button class="attack-btn active" onclick="loadAttack('tautology')">
+      <span class="atk-icon">🔓</span>
+      <div>
+        <div class="atk-name">Auth Bypass</div>
+        <div class="atk-desc">OR 1=1 tautology</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('union')">
+      <span class="atk-icon">🗃️</span>
+      <div>
+        <div class="atk-name">UNION Data Dump</div>
+        <div class="atk-desc">Extract credentials via UNION</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('blind_time')">
+      <span class="atk-icon">⏱️</span>
+      <div>
+        <div class="atk-name">Blind Time-Based</div>
+        <div class="atk-desc">Infer data via SLEEP delays</div>
+      </div>
+      <span class="severity-dot sev-high"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('stacked')">
+      <span class="atk-icon">💣</span>
+      <div>
+        <div class="atk-name">Stacked Query</div>
+        <div class="atk-desc">Drop table via semicolon</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('comment')">
+      <span class="atk-icon">💬</span>
+      <div>
+        <div class="atk-name">Comment Injection</div>
+        <div class="atk-desc">Truncate query with --</div>
+      </div>
+      <span class="severity-dot sev-high"></span>
+    </button>
+
+    <div class="atk-section" style="margin-top:12px;">Insider Threat</div>
+
+    <button class="attack-btn" onclick="loadAttack('salary_dump')">
+      <span class="atk-icon">💰</span>
+      <div>
+        <div class="atk-name">Salary Exfiltration</div>
+        <div class="atk-desc">Bulk salary + SSN harvest</div>
+      </div>
+      <span class="severity-dot sev-high"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('priv_esc')">
+      <span class="atk-icon">👑</span>
+      <div>
+        <div class="atk-name">Privilege Escalation</div>
+        <div class="atk-desc">Elevate own role to admin</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('credential')">
+      <span class="atk-icon">🔑</span>
+      <div>
+        <div class="atk-name">Credential Harvest</div>
+        <div class="atk-desc">Extract password hashes</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('enum')">
+      <span class="atk-icon">📄</span>
+      <div>
+        <div class="atk-name">Data Enumeration</div>
+        <div class="atk-desc">Paginated bulk data harvest</div>
+      </div>
+      <span class="severity-dot sev-medium"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('bulk_delete')">
+      <span class="atk-icon">🗑️</span>
+      <div>
+        <div class="atk-name">Destructive Delete</div>
+        <div class="atk-desc">DELETE without WHERE clause</div>
+      </div>
+      <span class="severity-dot sev-critical"></span>
+    </button>
+
+    <div class="atk-section" style="margin-top:12px;">Evasion Attempts</div>
+
+    <button class="attack-btn" onclick="loadAttack('hex_encode')">
+      <span class="atk-icon">🧩</span>
+      <div>
+        <div class="atk-name">Hex Encoding</div>
+        <div class="atk-desc">Obfuscate payload as hex</div>
+      </div>
+      <span class="severity-dot sev-high"></span>
+    </button>
+
+    <button class="attack-btn" onclick="loadAttack('schema_enum')">
+      <span class="atk-icon">🗺️</span>
+      <div>
+        <div class="atk-name">Schema Discovery</div>
+        <div class="atk-desc">Probe information_schema</div>
+      </div>
+      <span class="severity-dot sev-high"></span>
+    </button>
+
+  </aside>
+
+  <!-- ── Main Panel ── -->
+  <div class="atk-main">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+      <!-- Attack Details -->
+      <div>
+        <div class="atk-title">Attack Details</div>
+        <div class="attack-card">
+          <h2 id="attackTitle">Authentication Bypass</h2>
+          <div class="mitre-tag" id="mitreTag">T1190 — Exploit Public-Facing App</div>
+          <p class="desc" id="attackDesc">
+            Classic OR 1=1 tautology injection. Forces the WHERE clause to always evaluate
+            as true, bypassing authentication and returning all records regardless of credentials.
+          </p>
+
+          <div style="margin-bottom:12px;">
+            <div class="atk-title" style="margin-bottom:6px;">Payload</div>
+            <div class="query-display" id="attackQuery">SELECT * FROM users WHERE username='admin'--</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <select class="role-select-small" id="attackRole">
+              <option value="outsider">👾 Outsider</option>
+              <option value="employee">👤 Employee</option>
+              <option value="admin">🔑 Admin</option>
+            </select>
+            <button class="fire-btn" id="fireBtn" onclick="fireAttack()">
+              🚀 Fire Attack
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detection Result -->
+      <div>
+        <div class="atk-title">Detection Result</div>
+        <div class="atk-result">
+          <div id="resultBanner" style="display:none;"></div>
+          <div id="noResult" class="empty-feed">
+            Fire an attack to see detection results
+          </div>
+
+          <div id="detectionDetails" style="display:none;">
+            <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+              <div class="score-ring" id="scoreRing">—</div>
+              <div>
+                <div style="font-size:18px; font-weight:700;" id="detLabel">—</div>
+                <div style="font-size:12px; color:#6b2530;" id="detAttackType">—</div>
+              </div>
+            </div>
+
+            <div class="detection-row">
+              <span class="det-label">Detection Source</span>
+              <span class="det-value" id="detSource">—</span>
+            </div>
+            <div class="detection-row">
+              <span class="det-label">Role Multiplier</span>
+              <span class="det-value" id="detMultiplier">—</span>
+            </div>
+            <div class="detection-row">
+              <span class="det-label">Flagged</span>
+              <span class="det-value" id="detFlagged">—</span>
+            </div>
+            <div class="detection-row" style="align-items:flex-start;">
+              <span class="det-label" style="margin-top:2px;">Explanation</span>
+              <span class="det-value" id="detExplanation" style="font-size:12px; line-height:1.5; color:#9d4a56;">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Live Attack Feed -->
+    <div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div class="atk-title">Live Attack Feed</div>
+        <button onclick="clearFeed()" style="background:none; border:none; color:#6b2530; font-size:11px; cursor:pointer;">Clear</button>
+      </div>
+      <div class="live-feed" id="liveFeed">
+        <div class="empty-feed">No attacks fired yet. Choose an attack from the left panel.</div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+      <div class="attack-card" style="text-align:center; padding:16px;">
+        <div style="font-size:26px; font-weight:700; color:#fca5a5;" id="statTotal">0</div>
+        <div style="font-size:11px; color:#6b2530; text-transform:uppercase;">Attacks Fired</div>
+      </div>
+      <div class="attack-card" style="text-align:center; padding:16px;">
+        <div style="font-size:26px; font-weight:700; color:#34d399;" id="statCaught">0</div>
+        <div style="font-size:11px; color:#6b2530; text-transform:uppercase;">Caught</div>
+      </div>
+      <div class="attack-card" style="text-align:center; padding:16px;">
+        <div style="font-size:26px; font-weight:700; color:#f97316;" id="statEvaded">0</div>
+        <div style="font-size:11px; color:#6b2530; text-transform:uppercase;">Evaded</div>
+      </div>
+      <div class="attack-card" style="text-align:center; padding:16px;">
+        <div style="font-size:26px; font-weight:700; color:#fca5a5;" id="statRate">0%</div>
+        <div style="font-size:11px; color:#6b2530; text-transform:uppercase;">Detection Rate</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Attack Definitions ─────────────────────────────────
+const ATTACKS = {
+  tautology: {
+    title: "Authentication Bypass (OR 1=1)",
+    mitre: "T1190 — Exploit Public-Facing Application",
+    desc: "Classic OR 1=1 tautology injection. Forces the WHERE clause to always evaluate as true, bypassing login authentication and dumping all user records.",
+    query: "SELECT * FROM users WHERE username='admin' OR '1'='1'",
+    defaultRole: "outsider"
+  },
+  union: {
+    title: "UNION-Based Credential Dump",
+    mitre: "T1213 — Data from Information Repositories",
+    desc: "UNION SELECT injection appends an attacker-controlled query to the legitimate one, extracting username and password hashes from the users table.",
+    query: "SELECT id, product_name FROM orders WHERE id=1 UNION SELECT username, password_hash FROM users--",
+    defaultRole: "outsider"
+  },
+  blind_time: {
+    title: "Blind Time-Based SQLi",
+    mitre: "T1190 — Exploit Public-Facing Application",
+    desc: "Uses SLEEP() to infer database information without visible output. If the app delays by 5 seconds, the condition is true — attacker maps the schema bit by bit.",
+    query: "SELECT * FROM users WHERE id=1 AND SLEEP(5)",
+    defaultRole: "outsider"
+  },
+  stacked: {
+    title: "Stacked Query — DROP TABLE",
+    mitre: "T1485 — Data Destruction",
+    desc: "Stacks a destructive DDL statement after a legitimate query using semicolons. Attempts to drop the users table — permanent data destruction.",
+    query: "SELECT id FROM users WHERE id=1; DROP TABLE employees;--",
+    defaultRole: "outsider"
+  },
+  comment: {
+    title: "Comment Injection Auth Bypass",
+    mitre: "T1190 — Exploit Public-Facing Application",
+    desc: "SQL comment (--) truncates the rest of the query, eliminating the password check entirely. The attacker logs in as any user without knowing the password.",
+    query: "SELECT * FROM users WHERE username='admin'--",
+    defaultRole: "outsider"
+  },
+  salary_dump: {
+    title: "Salary & PII Mass Exfiltration",
+    mitre: "T1530 — Data from Cloud Storage",
+    desc: "Malicious insider systematically harvests all employee salary and SSN data using LIMIT/OFFSET pagination to avoid triggering bulk-access alerts.",
+    query: "SELECT full_name, salary, ssn, department FROM employees LIMIT 100 OFFSET 0",
+    defaultRole: "employee"
+  },
+  priv_esc: {
+    title: "Privilege Escalation to Admin",
+    mitre: "T1548 — Abuse Elevation Control Mechanism",
+    desc: "Insider directly updates their own role field to 'admin' in the users table, granting themselves full system privileges without authorization.",
+    query: "UPDATE users SET role='admin' WHERE username='bob'",
+    defaultRole: "employee"
+  },
+  credential: {
+    title: "Password Hash Harvesting",
+    mitre: "T1003 — OS Credential Dumping",
+    desc: "Insider exports all usernames and password hashes from the users table. Hashes can be cracked offline to obtain plaintext passwords.",
+    query: "SELECT username, email, password_hash, role FROM users",
+    defaultRole: "employee"
+  },
+  enum: {
+    title: "Systematic Data Enumeration",
+    mitre: "T1119 — Automated Collection",
+    desc: "Uses LIMIT + OFFSET to page through the entire employees table, harvesting all records in batches to avoid triggering single large-query alerts.",
+    query: "SELECT full_name, salary, ssn, hire_date FROM employees LIMIT 50 OFFSET 150",
+    defaultRole: "employee"
+  },
+  bulk_delete: {
+    title: "Destructive Bulk Delete",
+    mitre: "T1485 — Data Destruction",
+    desc: "DELETE without a WHERE clause wipes all records from the transactions table. This is sabotage — destroys financial audit trail completely.",
+    query: "DELETE FROM transactions",
+    defaultRole: "employee"
+  },
+  hex_encode: {
+    title: "Hex-Encoded Evasion Attempt",
+    mitre: "T1027 — Obfuscated Files or Information",
+    desc: "Attacker encodes the payload as hex to bypass naive string-matching filters. 0x61646d696e = 'admin' in hex — tests if the detector sees through encoding.",
+    query: "SELECT * FROM users WHERE username=0x61646d696e",
+    defaultRole: "outsider"
+  },
+  schema_enum: {
+    title: "Database Schema Discovery",
+    mitre: "T1082 — System Information Discovery",
+    desc: "Attacker queries information_schema to map all tables and columns in the database — reconnaissance step before a targeted data extraction attack.",
+    query: "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema=database()",
+    defaultRole: "outsider"
+  }
+};
+
+// ── State ──────────────────────────────────────────────
+const sessionId = crypto.randomUUID();
+let currentAttackKey = 'tautology';
+let stats = { total: 0, caught: 0, evaded: 0 };
+
+// ── Load Attack ────────────────────────────────────────
+function loadAttack(key) {
+  currentAttackKey = key;
+  const a = ATTACKS[key];
+
+  document.getElementById('attackTitle').textContent   = a.title;
+  document.getElementById('mitreTag').textContent      = a.mitre;
+  document.getElementById('attackDesc').textContent    = a.desc;
+  document.getElementById('attackQuery').textContent   = a.query;
+  document.getElementById('attackRole').value          = a.defaultRole;
+
+  // Reset result panel
+  document.getElementById('resultBanner').style.display    = 'none';
+  document.getElementById('detectionDetails').style.display = 'none';
+  document.getElementById('noResult').style.display        = 'block';
+
+  // Sidebar highlight
+  document.querySelectorAll('.attack-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ── Fire Attack ────────────────────────────────────────
+async function fireAttack() {
+  const a    = ATTACKS[currentAttackKey];
+  const role = document.getElementById('attackRole').value;
+  const btn  = document.getElementById('fireBtn');
+
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Firing...';
+
+  try {
+    const resp = await fetch('/api/portal/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query:     a.query,
+        username:  'attacker',
+        user_role: role,
+        session_id: sessionId
+      })
+    });
+
+    const data = await resp.json();
+    renderResult(data, a.query, role);
+    addToFeed(data, a.query, a.title);
+    updateStats(data);
+
+  } catch(e) {
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Fire Attack';
+  }
+}
+
+// ── Render Result ──────────────────────────────────────
+function renderResult(data, query, role) {
+  document.getElementById('noResult').style.display = 'none';
+
+  const caught  = data.blocked || data.label !== 'benign';
+  const score   = data.risk_score || 0;
+  const color   = score >= 0.8 ? '#ef4444' : score >= 0.5 ? '#f97316' : '#eab308';
+
+  // Banner
+  const banner = document.getElementById('resultBanner');
+  banner.style.display = 'flex';
+  if (caught) {
+    banner.className = 'caught-banner';
+    banner.innerHTML = `
+      <span style="font-size:24px;">🚨</span>
+      <div>
+        <div style="font-weight:700; color:#f87171;">DETECTED & BLOCKED</div>
+        <div style="font-size:11px; color:#9d4a56;">Security system intercepted this attack. Incident logged.</div>
+      </div>
+    `;
+  } else {
+    banner.className = 'passed-banner';
+    banner.innerHTML = `
+      <span style="font-size:24px;">⚠️</span>
+      <div>
+        <div style="font-weight:700; color:#fbbf24;">PASSED DETECTION</div>
+        <div style="font-size:11px; color:#9d6b20;">This query was not flagged — consider improving detection rules.</div>
+      </div>
+    `;
+  }
+
+  // Score ring
+  const ring = document.getElementById('scoreRing');
+  ring.textContent = score.toFixed(2);
+  ring.style.color = color;
+  ring.style.borderColor = color;
+
+  // Details
+  document.getElementById('detectionDetails').style.display = 'block';
+  document.getElementById('detLabel').textContent        = (data.label || 'unknown').toUpperCase();
+  document.getElementById('detLabel').style.color        = caught ? '#f87171' : '#fbbf24';
+  document.getElementById('detAttackType').textContent   = (data.attack_type || 'unknown').replace(/_/g,' ');
+  document.getElementById('detSource').textContent       = data.detection_source || '—';
+  document.getElementById('detMultiplier').textContent   = `×${data.role_multiplier || 1.0} (${role})`;
+  document.getElementById('detFlagged').innerHTML        = caught
+    ? '<span style="color:#f87171;">⚠ YES — Query Blocked</span>'
+    : '<span style="color:#fbbf24;">✓ NOT FLAGGED</span>';
+  document.getElementById('detExplanation').textContent  = data.explanation || data.message || '—';
+}
+
+// ── Live Feed ──────────────────────────────────────────
+const feedEl = document.getElementById('liveFeed');
+
+function addToFeed(data, query, title) {
+  const caught = data.blocked || data.label !== 'benign';
+  const score  = data.risk_score || 0;
+  const color  = score >= 0.8 ? '#f87171' : score >= 0.5 ? '#f97316' : '#eab308';
+  const time   = new Date().toLocaleTimeString();
+
+  // Remove empty state
+  const empty = feedEl.querySelector('.empty-feed');
+  if (empty) empty.remove();
+
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML = `
+    <span class="feed-time">${time}</span>
+    <span class="feed-label" style="color:${color};">${(data.label || '?').toUpperCase()}</span>
+    <span class="feed-query">${escapeHtml(query)}</span>
+    <span>${caught ? '🚨' : '⚠️'}</span>
+    <span class="feed-score" style="color:${color};">${score.toFixed(2)}</span>
+  `;
+  feedEl.insertBefore(item, feedEl.firstChild);
+}
+
+function clearFeed() {
+  feedEl.innerHTML = `<div class="empty-feed">Feed cleared.</div>`;
+}
+
+// ── Stats ──────────────────────────────────────────────
+function updateStats(data) {
+  const caught = data.blocked || data.label !== 'benign';
+  stats.total++;
+  if (caught) stats.caught++; else stats.evaded++;
+
+  document.getElementById('statTotal').textContent  = stats.total;
+  document.getElementById('statCaught').textContent = stats.caught;
+  document.getElementById('statEvaded').textContent = stats.evaded;
+  document.getElementById('statRate').textContent   =
+    stats.total ? Math.round((stats.caught / stats.total) * 100) + '%' : '0%';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

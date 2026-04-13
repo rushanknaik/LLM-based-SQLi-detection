@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CorpDB — Employee Portal</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    /* Portal-specific overrides — lighter, more "corporate" feel */
+    body { background: #0a0f1a; }
+
+    .portal-header {
+      background: linear-gradient(135deg, #0d1f3c 0%, #1a2d4a 100%);
+      border-bottom: 2px solid #1e4080;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .portal-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; color: #60a5fa;
+      letter-spacing: 1px;
+    }
+
+    .portal-brand span { color: #e2e8f0; font-weight: 400; font-size: 13px; }
+
+    .user-pill {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 6px 16px;
+      font-size: 13px;
+    }
+
+    .user-avatar {
+      width: 28px; height: 28px;
+      background: #3b82f6;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px;
+    }
+
+    .portal-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      background: #0d1520;
+      border-right: 1px solid #1e2d45;
+      padding: 20px 0;
+    }
+
+    .sidebar-section {
+      padding: 8px 16px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #4a6080;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      color: #8899aa;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar-item:hover { color: #e2e8f0; background: rgba(255,255,255,0.04); }
+
+    .sidebar-item.active {
+      color: #60a5fa;
+      background: rgba(96,165,250,0.08);
+      border-left-color: #60a5fa;
+    }
+
+    .sidebar-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .main-content { padding: 28px 32px; overflow-y: auto; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-title {
+      font-size: 20px; font-weight: 700;
+      color: #e2e8f0; margin-bottom: 6px;
+    }
+
+    .page-subtitle { color: #4a6080; font-size: 13px; margin-bottom: 24px; }
+
+    /* Profile card */
+    .profile-card {
+      background: linear-gradient(135deg, #0d1f3c, #132840);
+      border: 1px solid #1e3a5f;
+      border-radius: 12px;
+      padding: 28px;
+      display: flex; align-items: center; gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .profile-avatar {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+
+    .profile-info h2 { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+    .profile-info p  { color: #60a5fa; font-size: 13px; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .info-item {
+      background: #0d1a2e;
+      border: 1px solid #1e3050;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .info-item .label {
+      font-size: 10px; color: #4a6080;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .info-item .value { font-size: 14px; color: #e2e8f0; font-weight: 500; }
+
+    /* Directory */
+    .dept-filter {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+
+    .dept-btn {
+      padding: 5px 14px;
+      border: 1px solid #1e3050;
+      border-radius: 20px;
+      background: #0d1a2e;
+      color: #8899aa;
+      cursor: pointer; font-size: 12px;
+      transition: all 0.15s;
+    }
+
+    .dept-btn:hover, .dept-btn.active {
+      background: #1e3a6e; border-color: #3b82f6; color: #60a5fa;
+    }
+
+    .dir-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .dir-card {
+      background: #0d1a2e;
+      border: 1px solid #1e3050;
+      border-radius: 8px;
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+
+    .dir-card:hover { border-color: #3b82f6; }
+
+    .dir-card .name { font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+    .dir-card .position { color: #60a5fa; font-size: 12px; margin-bottom: 4px; }
+    .dir-card .dept { color: #4a6080; font-size: 11px; }
+    .dir-card .email { color: #4a6080; font-size: 11px; margin-top: 6px; }
+
+    /* Orders table */
+    .orders-table th { background: #0d1a2e; color: #4a6080; }
+    .orders-table td { border-color: #1e2d45; }
+    .orders-table tr:hover td { background: rgba(96,165,250,0.04); }
+
+    .status-badge {
+      padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-completed { background: rgba(52,211,153,0.15); color: #34d399; }
+    .status-pending   { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .status-shipped   { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+
+    /* Query terminal */
+    .terminal {
+      background: #060d18;
+      border: 1px solid #1e3050;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .terminal-bar {
+      background: #0d1a2e;
+      border-bottom: 1px solid #1e3050;
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: #4a6080;
+    }
+
+    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .terminal-body { padding: 16px; }
+
+    textarea#portalQuery {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #a8d8a8;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 90px;
+      outline: none;
+      line-height: 1.6;
+    }
+
+    .terminal-footer {
+      border-top: 1px solid #1e3050;
+      padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .run-btn {
+      background: #1d4ed8;
+      color: white;
+      border: none;
+      padding: 7px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s;
+    }
+    .run-btn:hover { background: #2563eb; }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Results */
+    .result-table-wrap {
+      margin-top: 16px;
+      border: 1px solid #1e3050;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .result-table-wrap table th { background: #0d1a2e; font-size: 11px; }
+    .result-table-wrap table td { font-size: 12px; font-family: monospace; border-color: #1e2d45; }
+
+    /* Blocked overlay */
+    .blocked-result {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 16px;
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+
+    .blocked-icon { font-size: 32px; flex-shrink: 0; }
+
+    .blocked-title { font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 6px; }
+    .blocked-detail { font-size: 12px; color: #8899aa; line-height: 1.6; }
+
+    .risk-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Security notice strip */
+    .security-notice {
+      background: rgba(96,165,250,0.06);
+      border: 1px solid rgba(96,165,250,0.15);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 11px;
+      color: #4a6080;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Portal Header ── -->
+<header class="portal-header">
+  <div class="portal-brand">
+    🏢 CorpDB <span>/ Employee Data Portal</span>
+  </div>
+  <div style="display:flex; gap:12px; align-items:center;">
+    <a href="/dashboard" target="_blank"
+       style="font-size:11px; color:#4a6080; text-decoration:none; border:1px solid #1e3050; padding:4px 12px; border-radius:20px;">
+      🛡 Security Dashboard ↗
+    </a>
+    <div class="user-pill">
+      <div class="user-avatar" id="avatarInitial">A</div>
+      <div>
+        <div style="font-weight:600;" id="headerUsername">alice</div>
+        <div style="font-size:10px; color:#4a6080;" id="headerRole">employee</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Login Screen ── -->
+<div id="loginScreen" style="
+  position:fixed; inset:0; background:#060d18;
+  display:flex; align-items:center; justify-content:center;
+  z-index:500;
+">
+  <div style="
+    background:#0d1a2e; border:1px solid #1e3050;
+    border-radius:16px; padding:40px; width:380px;
+  ">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="font-size:36px; margin-bottom:8px;">🏢</div>
+      <div style="font-size:20px; font-weight:700; color:#e2e8f0;">CorpDB Portal</div>
+      <div style="font-size:13px; color:#4a6080; margin-top:4px;">Employee Database System</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="color:#4a6080;">Select Employee</label>
+      <select id="loginUser" class="form-control" style="background:#060d18; border-color:#1e3050;">
+        <option value="alice">Alice Johnson — Engineering</option>
+        <option value="bob">Bob Smith — Marketing</option>
+        <option value="diana">Diana Prince — HR</option>
+        <option value="eve">Eve Wilson — Finance</option>
+        <option value="charlie">Charlie Brown — Admin (Manager)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="color:#4a6080;">Role</label>
+      <select id="loginRole" class="form-control" style="background:#060d18; border-color:#1e3050;">
+        <option value="employee">Employee</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <button onclick="doLogin()" style="
+      width:100%; background:#1d4ed8; color:white; border:none;
+      padding:12px; border-radius:8px; font-size:14px;
+      font-weight:600; cursor:pointer; margin-top:8px;
+    ">Sign In →</button>
+
+    <div style="text-align:center; margin-top:16px;">
+      <a href="/attacker" style="font-size:11px; color:#4a6080;">
+        Switch to Attack Simulator ↗
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Portal Layout ── -->
+<div class="portal-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Main Menu</div>
+    <div class="sidebar-item active" onclick="showPage('profile')" id="nav-profile">
+      <span class="icon">👤</span> My Profile
+    </div>
+    <div class="sidebar-item" onclick="showPage('directory')" id="nav-directory">
+      <span class="icon">📋</span> Employee Directory
+    </div>
+    <div class="sidebar-item" onclick="showPage('orders')" id="nav-orders">
+      <span class="icon">📦</span> My Orders
+    </div>
+
+    <div class="sidebar-section" style="margin-top:16px;">Power User</div>
+    <div class="sidebar-item" onclick="showPage('query')" id="nav-query">
+      <span class="icon">💻</span> Custom Query
+    </div>
+
+    <div style="position:absolute; bottom:20px; left:0; right:0; padding:0 16px;">
+      <div onclick="doLogout()" class="sidebar-item" style="border-radius:8px; color:#f87171;">
+        <span class="icon">🚪</span> Sign Out
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ── Profile Page ── -->
+    <div class="page active" id="page-profile">
+      <div class="page-title">My Profile</div>
+      <div class="page-subtitle">Your employee record and account details</div>
+
+      <div class="profile-card" id="profileCard">
+        <div class="profile-avatar" id="profileAvatar">A</div>
+        <div class="profile-info">
+          <h2 id="profileName">Loading...</h2>
+          <p id="profilePosition"></p>
+          <p id="profileDept" style="color:#4a6080; margin-top:2px;"></p>
+        </div>
+      </div>
+
+      <div class="info-grid" id="profileInfoGrid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- ── Directory Page ── -->
+    <div class="page" id="page-directory">
+      <div class="page-title">Employee Directory</div>
+      <div class="page-subtitle">Search colleagues by department</div>
+
+      <div class="dept-filter" id="deptFilter">
+        <div class="dept-btn active" onclick="filterDept('all', this)">All</div>
+      </div>
+
+      <div class="dir-grid" id="dirGrid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- ── Orders Page ── -->
+    <div class="page" id="page-orders">
+      <div class="page-title">My Orders</div>
+      <div class="page-subtitle">Purchase history and order status</div>
+
+      <div class="result-table-wrap" style="margin-top:0;">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Custom Query Page ── -->
+    <div class="page" id="page-query">
+      <div class="page-title">Custom Query Terminal</div>
+      <div class="page-subtitle">Run SQL queries directly against the company database</div>
+
+      <div class="security-notice">
+        🛡 All queries are monitored by the security system. Suspicious activity is logged and reported.
+      </div>
+
+      <!-- Quick Templates -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px; color:#4a6080; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Quick Templates</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="dept-btn" onclick="setQuery(`SELECT id, username, email, role FROM users`)">List Users</button>
+          <button class="dept-btn" onclick="setQuery(`SELECT full_name, department, position FROM employees WHERE department='Engineering'`)">Engineering Team</button>
+          <button class="dept-btn" onclick="setQuery(`SELECT product_name, quantity, total_amount FROM orders WHERE status='pending'`)">Pending Orders</button>
+          <button class="dept-btn" onclick="setQuery(`SELECT transaction_type, amount, description FROM transactions WHERE account_id=1001`)">Transactions</button>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot" style="background:#f87171;"></div>
+          <div class="terminal-dot" style="background:#fbbf24;"></div>
+          <div class="terminal-dot" style="background:#34d399;"></div>
+          <span style="margin-left:8px;">company.db — SQL Terminal</span>
+          <span style="margin-left:auto; font-size:10px;">Ctrl+Enter to run</span>
+        </div>
+        <div class="terminal-body">
+          <textarea id="portalQuery" placeholder="SELECT id, username, email FROM users WHERE role = 'employee'"></textarea>
+        </div>
+        <div class="terminal-footer">
+          <span style="font-size:11px; color:#4a6080;" id="queryStatus">Ready</span>
+          <button class="run-btn" id="runBtn" onclick="runPortalQuery()">
+            ▶ Run Query
+          </button>
+        </div>
+      </div>
+
+      <!-- Result area -->
+      <div id="queryResultArea"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+const sessionId = crypto.randomUUID();
+let currentUser = { username: 'alice', role: 'employee', id: 1 };
+const userIds = { alice: 1, bob: 2, charlie: 3, diana: 4, eve: 5 };
+
+// ── Login ──────────────────────────────────────────────
+function doLogin() {
+  const username = document.getElementById('loginUser').value;
+  const role     = document.getElementById('loginRole').value;
+  currentUser = { username, role, id: userIds[username] || 1 };
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('headerUsername').textContent = username;
+  document.getElementById('headerRole').textContent = role;
+  document.getElementById('avatarInitial').textContent = username[0].toUpperCase();
+
+  loadProfile();
+  loadDirectory();
+  loadOrders();
+}
+
+function doLogout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ── Page navigation ────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+// ── Profile ────────────────────────────────────────────
+async function loadProfile() {
+  try {
+    const data = await fetchJSON(`/api/portal/profile/${currentUser.username}`);
+    const initials = (data.full_name || data.username || 'U')[0].toUpperCase();
+    document.getElementById('profileAvatar').textContent = initials;
+    document.getElementById('profileName').textContent = data.full_name || data.username;
+    document.getElementById('profilePosition').textContent = data.position || '';
+    document.getElementById('profileDept').textContent = data.department || '';
+
+    document.getElementById('profileInfoGrid').innerHTML = `
+      <div class="info-item">
+        <div class="label">Username</div>
+        <div class="value">${data.username}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Email</div>
+        <div class="value">${data.email}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Department</div>
+        <div class="value">${data.department || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Position</div>
+        <div class="value">${data.position || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">System Role</div>
+        <div class="value" style="color:#60a5fa;">${data.role}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Hire Date</div>
+        <div class="value">${data.hire_date || '—'}</div>
+      </div>
+    `;
+  } catch(e) { console.error(e); }
+}
+
+// ── Directory ──────────────────────────────────────────
+let allEmployees = [];
+
+async function loadDirectory() {
+  try {
+    allEmployees = await fetchJSON('/api/portal/directory');
+    const depts  = [...new Set(allEmployees.map(e => e.department))];
+    const filter = document.getElementById('deptFilter');
+
+    // Add dept buttons
+    depts.forEach(d => {
+      if (!filter.querySelector(`[data-dept="${d}"]`)) {
+        const btn = document.createElement('div');
+        btn.className = 'dept-btn';
+        btn.dataset.dept = d;
+        btn.textContent = d;
+        btn.onclick = () => filterDept(d, btn);
+        filter.appendChild(btn);
+      }
+    });
+
+    renderDirectory(allEmployees);
+  } catch(e) { console.error(e); }
+}
+
+function filterDept(dept, el) {
+  document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = dept === 'all' ? allEmployees : allEmployees.filter(e => e.department === dept);
+  renderDirectory(filtered);
+}
+
+function renderDirectory(employees) {
+  const grid = document.getElementById('dirGrid');
+  if (!employees.length) {
+    grid.innerHTML = `<div style="color:#4a6080; grid-column:1/-1; padding:30px;">No employees found.</div>`;
+    return;
+  }
+  grid.innerHTML = employees.map(e => `
+    <div class="dir-card">
+      <div class="name">${e.full_name}</div>
+      <div class="position">${e.position}</div>
+      <div class="dept">📁 ${e.department}</div>
+      <div class="email">✉️ ${e.email}</div>
+    </div>
+  `).join('');
+}
+
+// ── Orders ─────────────────────────────────────────────
+async function loadOrders() {
+  try {
+    const rows = await fetchJSON(`/api/portal/orders/${currentUser.id}`);
+    const tbody = document.getElementById('ordersBody');
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#4a6080; padding:30px;">No orders found</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="color:#4a6080;">${r.id}</td>
+        <td>${r.product_name}</td>
+        <td>${r.quantity}</td>
+        <td>$${r.total_amount.toFixed(2)}</td>
+        <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+        <td style="color:#4a6080; font-size:11px;">${r.order_date?.split('T')[0] || r.order_date}</td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+// ── Custom Query Terminal ──────────────────────────────
+function setQuery(q) {
+  document.getElementById('portalQuery').value = q;
+  showPage('query');
+}
+
+async function runPortalQuery() {
+  const query = document.getElementById('portalQuery').value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('runBtn');
+  const status = document.getElementById('queryStatus');
+  btn.disabled = true;
+  status.textContent = '⏳ Running...';
+  document.getElementById('queryResultArea').innerHTML = '';
+
+  try {
+    const resp = await fetch('/api/portal/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        username: currentUser.username,
+        user_role: currentUser.role,
+        session_id: sessionId
+      })
+    });
+
+    const data = await resp.json();
+    renderQueryResult(data);
+    status.textContent = data.blocked ? '🚫 Blocked' : `✅ ${data.row_count || 0} row(s) returned`;
+
+  } catch(e) {
+    status.textContent = '❌ Error';
+    document.getElementById('queryResultArea').innerHTML =
+      `<div style="color:#f87171; margin-top:12px; font-size:13px;">Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderQueryResult(data) {
+  const area = document.getElementById('queryResultArea');
+
+  if (data.blocked) {
+    const riskColor = data.risk_score >= 0.8 ? '#f87171' : '#fbbf24';
+    area.innerHTML = `
+      <div class="blocked-result">
+        <div class="blocked-icon">🚫</div>
+        <div>
+          <div class="blocked-title">Query Blocked by Security System</div>
+          <div class="blocked-detail">${data.message}</div>
+          <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+            <span class="risk-pill" style="background:rgba(239,68,68,0.15); color:#f87171;">
+              ${data.label?.toUpperCase() || 'THREAT'}
+            </span>
+            <span class="risk-pill" style="background:rgba(0,0,0,0.3); color:${riskColor};">
+              Risk: ${(data.risk_score || 0).toFixed(3)}
+            </span>
+            <span class="risk-pill" style="background:rgba(0,0,0,0.3); color:#8899aa;">
+              ${(data.attack_type || '').replace(/_/g, ' ')}
+            </span>
+          </div>
+          <div style="margin-top:10px; font-size:11px; color:#4a6080; font-style:italic;">
+            ${data.explanation || ''}
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:#374151;">
+            ℹ️ This incident has been logged to the security dashboard.
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (!data.results || !data.results.length) {
+    area.innerHTML = `<div style="color:#4a6080; margin-top:16px; font-size:13px;">Query returned no results.</div>`;
+    return;
+  }
+
+  const riskColor = data.risk_score < 0.4 ? '#34d399' : data.risk_score < 0.7 ? '#fbbf24' : '#f87171';
+
+  area.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:14px 0 8px;">
+      <span style="font-size:12px; color:#4a6080;">${data.row_count} row(s) — ${data.columns?.length} column(s)</span>
+      <span class="risk-pill" style="background:rgba(0,0,0,0.3); color:${riskColor}; font-size:11px;">
+        Risk: ${data.risk_score.toFixed(3)}
+      </span>
+    </div>
+    <div class="result-table-wrap" style="margin-top:0;">
+      <table>
+        <thead>
+          <tr>${data.columns.map(c => `<th>${c}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          ${data.results.map(row =>
+            `<tr>${data.columns.map(c =>
+              `<td>${row[c] !== null && row[c] !== undefined ? row[c] : '<span style="color:#4a6080;">NULL</span>'}</td>`
+            ).join('')}</tr>`
+          ).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Helper ─────────────────────────────────────────────
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Ctrl+Enter to run
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('portalQuery')?.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') runPortalQuery();
+  });
+});
+</script>
+</body>
+</html>
